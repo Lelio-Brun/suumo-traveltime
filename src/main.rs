@@ -60,11 +60,11 @@ struct Building {
     name: String,
     address: String,
     coordinates: (f64, f64),
-    times: HashMap<usize, usize>,
+    times: HashMap<usize, (Criterion, usize)>,
     apartments: Vec<Apartment>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 enum TransportationMode {
     Cycling,
     Driving,
@@ -72,15 +72,17 @@ enum TransportationMode {
     Public,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct Criterion {
     mode: TransportationMode,
     location: (f64, f64),
     time: usize,
+    color: String,
 }
 
 const ADDRESS: &str = "東京都渋谷区渋谷1-3-7";
 const TIMEOUT: usize = 20;
+const DESTCOLOR: &str = "#c92a2a";
 
 fn main() {
     dioxus::launch(App);

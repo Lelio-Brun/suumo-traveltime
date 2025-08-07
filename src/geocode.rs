@@ -119,7 +119,8 @@ pub async fn get_travel_time<'a>(
             let k: usize = location["id"].as_str().unwrap().parse()?;
             let time: usize = location["properties"]["travel_time"].as_i64().unwrap() as usize;
             table.entry(k).and_modify(|building| {
-                building.times.insert(j, time);
+                let criterion = criteria.into_iter().nth(j).unwrap().clone();
+                building.times.insert(j, (criterion, time));
             });
         }
     }

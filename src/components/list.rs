@@ -5,6 +5,7 @@ use reqwest::{Client, RequestBuilder};
 use crate::ADDRESS;
 use crate::Building;
 use crate::Criterion;
+use crate::DESTCOLOR;
 use crate::Error;
 use crate::TIMEOUT;
 use crate::TransportationMode;
@@ -43,22 +44,29 @@ pub fn List(app_id: String, api_key: String) -> Element {
         .header("Accept-Language", "en-US");
     let geocode_request2 = geocode_request.try_clone().unwrap();
 
-    let mut criteria_count = use_signal(|| 1);
+    let criteria_colors = use_signal(|| vec![DESTCOLOR.to_string()]);
 
-    let mut criteria_raw =
-        use_signal(|| vec![(TransportationMode::Cycling, ADDRESS.to_string(), TIMEOUT)]);
+    let criteria_raw = use_signal(|| {
+        vec![(
+            TransportationMode::Cycling,
+            ADDRESS.to_string(),
+            TIMEOUT,
+            DESTCOLOR.to_string(),
+        )]
+    });
 
     let criteria = use_resource(move || {
         let request = geocode_request.try_clone().unwrap();
         async move {
             let mut criteria = vec![];
-            for (mode, address, time) in criteria_raw() {
+            for (mode, address, time, color) in criteria_raw() {
                 let request = request.try_clone().unwrap();
                 let location = geocode::geocode(&address, request).await?;
                 criteria.push(Criterion {
                     mode,
                     time,
                     location,
+                    color,
                 });
             }
             Ok(criteria)
@@ -87,13 +95,18 @@ pub fn List(app_id: String, api_key: String) -> Element {
 
                     match &*scrape.read_unchecked() {
                         Some(Ok(buildings)) => {
+                            spawn(async move {
+                                let e = document::eval(&format!(r"clearMap();")).await;
+                            });
+
                             for criterion in criteria {
                                 let (lng, lat) = criterion.location;
                                 let lng = lng.clone();
                                 let lat = lat.clone();
+                                let color = criterion.color.clone();
                                 spawn(async move {
                                     let e = document::eval(&format!(
-                                        r"clearMap(); addDest({lng}, {lat});"
+                                        r#"addDest({lng}, {lat}, "{color}");"#
                                     ))
                                     .await;
                                 });
@@ -101,7 +114,7 @@ pub fn List(app_id: String, api_key: String) -> Element {
 
                             let buildings = buildings
                                 .iter()
-                                .filter(|building| !building.times.is_empty());
+                                .filter(|building| building.times.len() == criteria.len());
                             for building in buildings {
                                 let name = building.name.clone();
                                 let lat = building.coordinates.0.clone();
@@ -129,7 +142,7 @@ pub fn List(app_id: String, api_key: String) -> Element {
     rsx! {
         div { id: "view",
               div { id: "ui",
-                    CriteriaForm { criteria_count, criteria_raw }
+                    CriteriaForm { criteria_colors, criteria_raw }
 
                     match &*scrape.read_unchecked() {
                         Some(Ok(buildings)) => {

@@ -1,12 +1,10 @@
 var map;
 var markers = new Map();
 var focusedMarker;
-var destination;
+var destinations = [];
 
-var destIcon = L.divIcon({className: 'dest-icon'});
 var apartIcon = L.divIcon({className: 'apartment-icon'});
-var apartHoverIcon = L.divIcon({className: 'apartment-hover-icon'// , iconSize: [100, 100]
-                               });
+var apartHoverIcon = L.divIcon({className: 'apartment-hover-icon'});
 
 function initMap() {
   map = L.map('map');
@@ -16,9 +14,11 @@ function initMap() {
   layer.addTo(map);
 }
 
-function addDest(lng, lat) {
-  destination = L.marker(L.latLng(lat, lng), {icon: destIcon});
+function addDest(lng, lat, color) {
+  var destIcon = L.divIcon({className: "none", iconSize: [20, 20], html: `<div style="width: 100%; height: 100%; background: ${color}99; border: 2px solid ${color}; border-radius: 50%"></div>`});
+  var destination = L.marker(L.latLng(lat, lng), {icon: destIcon});
   destination.addTo(map);
+  destinations.push(destination);
 }
 
 function clickMarker(e) {
@@ -37,17 +37,16 @@ function addMarker(name, lng, lat) {
 }
 
 function clearMap() {
-  if (destination != null) { destination.remove() };
+  destinations.forEach((marker) => marker.remove());
   markers.forEach((marker, _) => marker.remove());
 
-  destination = null;
+  destinations = [];
   markers.clear();
   focusedMarker = null;
 }
 
 function fitMap() {
-  var bounds = [...markers.values(), destination].map((marker) => marker.getLatLng());
-  // map.panTo(destination);
+  var bounds = [...markers.values(), ...destinations].map((marker) => marker.getLatLng());
   map.invalidateSize();
   map.fitBounds(bounds);
 }
@@ -56,7 +55,8 @@ function focusMarker(name) {
   focusedMarker = markers.get(name);
   focusedMarker.setIcon(apartHoverIcon);
   focusedMarker.setZIndexOffset(10000);
-  map.fitBounds([destination.getLatLng(), focusedMarker.getLatLng()]);
+  var bounds = [focusedMarker, ...destinations].map((marker) => marker.getLatLng());
+  map.fitBounds(bounds);
 }
 
 function unfocusMarker() {
