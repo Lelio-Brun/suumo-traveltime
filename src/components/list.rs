@@ -1,10 +1,8 @@
 use dioxus::prelude::*;
-use dioxus_logger::tracing;
 use reqwest::{Client, RequestBuilder};
 
 use crate::Building;
 use crate::Criterion;
-use crate::DESTCOLOR;
 use crate::Error;
 use crate::backend;
 use crate::components::BuildingView;
@@ -90,14 +88,14 @@ pub fn List(app_id: String, api_key: String) -> Element {
                     if !initialized_map {
                         initialized_map = true;
                         spawn(async move {
-                            let e = document::eval(&format!(r"initMap();")).await;
+                            let _ = document::eval(&format!(r"initMap();")).await;
                         });
                     }
 
                     match &*scrape.read_unchecked() {
                         Some(Ok(buildings)) => {
                             spawn(async move {
-                                let e = document::eval(&format!(r"clearMap();")).await;
+                                let _ = document::eval(&format!(r"clearMap();")).await;
                             });
 
                             for criterion in criteria {
@@ -106,7 +104,7 @@ pub fn List(app_id: String, api_key: String) -> Element {
                                 let lat = lat.clone();
                                 let color = criterion.color.clone();
                                 spawn(async move {
-                                    let e = document::eval(&format!(
+                                    let _ = document::eval(&format!(
                                         r#"addDest({lng}, {lat}, "{color}");"#
                                     ))
                                     .await;
@@ -121,7 +119,7 @@ pub fn List(app_id: String, api_key: String) -> Element {
                                 let lat = building.coordinates.0.clone();
                                 let lng = building.coordinates.1.clone();
                                 spawn(async move {
-                                    let e = document::eval(&format!(
+                                    let _ = document::eval(&format!(
                                         r#"addMarker("{name}", {lat}, {lng});"#
                                     ))
                                     .await;
@@ -129,7 +127,7 @@ pub fn List(app_id: String, api_key: String) -> Element {
                             }
 
                             spawn(async move {
-                                let e = document::eval(&r"fitMap();").await;
+                                let _ = document::eval(&r"fitMap();").await;
                             });
                         }
                         _ => (),
@@ -172,7 +170,7 @@ pub fn List(app_id: String, api_key: String) -> Element {
                     },
                     onresize: move |_| {
                         async move {
-                            let e = document::eval(&r"fitMap();").await;
+                            let _ = document::eval(&r"fitMap();").await;
                         }
                     }
               }

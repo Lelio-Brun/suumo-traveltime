@@ -84,8 +84,11 @@ pub struct Criterion {
     location: (f64, f64),
 }
 
+#[cfg(feature = "server")]
 const ADDRESS: &str = "東京都渋谷区渋谷1-3-7";
+#[cfg(feature = "server")]
 const TIMEOUT: usize = 20;
+#[cfg(feature = "server")]
 const DESTCOLOR: &str = "#c92a2a";
 
 fn main() {

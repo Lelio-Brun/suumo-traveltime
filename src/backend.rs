@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
-use dioxus_logger::tracing;
 
-use crate::{ADDRESS, Criterion, DESTCOLOR, TIMEOUT, TransportationMode};
+use crate::Criterion;
+
+#[cfg(feature = "server")]
+use crate::{ADDRESS, DESTCOLOR, TIMEOUT, TransportationMode};
 
 #[cfg(feature = "server")]
 thread_local! {
@@ -97,7 +99,6 @@ pub async fn get_criteria() -> Result<Vec<Criterion>, ServerFnError> {
             })?
             .collect::<Result<Vec<Criterion>, _>>();
         criteria
-        // Ok::<_, rusqlite::Error>(vec![])
     })?;
 
     if criteria.is_empty() {
@@ -116,22 +117,6 @@ pub async fn get_criteria() -> Result<Vec<Criterion>, ServerFnError> {
 #[server]
 pub async fn set_criteria(criteria: Vec<Criterion>) -> Result<(), ServerFnError> {
     DB.with(|db| {
-        let st = format!(
-            "DELETE FROM criteria;
-             INSERT INTO criteria VALUES {};",
-            criteria
-                .iter()
-                .map(|criterion| format!(
-                    r#"("{}", {}, {}, "{}")"#,
-                    criterion.address,
-                    serde_json::to_string(&criterion.mode).unwrap(),
-                    criterion.time,
-                    criterion.color
-                ))
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
-        tracing::debug!(st);
         db.execute_batch(&format!(
             "DELETE FROM criteria;
              INSERT INTO criteria VALUES {};",

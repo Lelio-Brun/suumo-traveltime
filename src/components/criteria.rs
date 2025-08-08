@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-// use dioxus_logger::tracing;
 
 use crate::{Criterion, Error, TransportationMode, backend};
 
@@ -7,8 +6,6 @@ use crate::{Criterion, Error, TransportationMode, backend};
 fn Criteria(criteria_raw: Signal<Vec<Criterion>>) -> Element {
     let criteria = criteria_raw();
     let multiple = criteria.len() > 1;
-    // let criteria_colors = criteria_colors();
-    // let mut default = (None, None, None);
 
     rsx! {
         div {
@@ -23,11 +20,9 @@ fn Criteria(criteria_raw: Signal<Vec<Criterion>>) -> Element {
                     button {
                         id: "rem_criterion",
                         r#type: "button",
-                        // value: "Add",
-                        // onclick: move |_| {
-                        //     let last = criteria_raw().last().unwrap().clone();
-                        //     criteria_raw.push(Criterion { color: random_color::RandomColor::new().to_hex(), ..last })
-                        // },
+                        onclick: move |_| {
+                            criteria_raw.remove(k);
+                        },
                         i { class: "fa-solid fa-circle-minus fa-lg"}
                     }
                 } else {
@@ -118,7 +113,6 @@ pub fn CriteriaForm(
                button {
                    id: "add_criterion",
                    r#type: "button",
-                   // value: "Add",
                    onclick: move |_| {
                        let last = criteria_raw().last().unwrap().clone();
                        criteria_raw.push(Criterion { color: random_color::RandomColor::new().to_hex(), ..last })

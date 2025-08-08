@@ -10,14 +10,12 @@ pub fn ApartmentView(name: String, apartment: Apartment) -> Element {
                  move |_| {
                      let name = name.clone();
                      async move {
-                         // tracing::debug!("Over {address}");
-                         let e = document::eval(&format!(r#"focusMarker("{name}");"#)).await;
+                         let _ = document::eval(&format!(r#"focusMarker("{name}");"#)).await;
                      }
                  },
              onmouseleave:  move |_| {
                  async move {
-                     // tracing::debug!("Leave");
-                     let e = document::eval(&format!(r#"unfocusMarker();"#)).await;
+                     let _ = document::eval(&format!(r#"unfocusMarker();"#)).await;
                  }
              },
              img {
