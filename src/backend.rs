@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
+use dioxus_logger::tracing;
 
-use crate::Criterion;
+use crate::{Criterion, SUUMOURL};
 
 #[cfg(feature = "server")]
 use crate::{ADDRESS, DESTCOLOR, TIMEOUT, TransportationMode};
@@ -26,7 +27,10 @@ thread_local! {
                 address TEXT NOT NULL,
                 mode TEXT NOT NULL,
                 time INTEGER,
-                color TEXT NOT NULL);").unwrap();
+                color TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS config (
+                id INTEGER PRIMARY KEY,
+                url TEXT NOT NULL);").unwrap();
 
         conn
     };
@@ -132,6 +136,25 @@ pub async fn set_criteria(criteria: Vec<Criterion>) -> Result<(), ServerFnError>
                 .collect::<Vec<_>>()
                 .join(", ")
         ))
+    })?;
+    Ok(())
+}
+
+#[server]
+pub async fn get_suumo_url() -> Result<String, ServerFnError> {
+    let url = DB
+        .with(|db| db.query_row("SELECT url FROM config", [], |row| row.get(0)))
+        .unwrap_or(SUUMOURL.to_string());
+    Ok(url)
+}
+
+#[server]
+pub async fn set_suumo_url(url: String) -> Result<(), ServerFnError> {
+    DB.with(|db| {
+        db.execute(
+            "INSERT INTO config VALUES (0, ?1) ON CONFLICT DO UPDATE SET url = ?1",
+            [url],
+        )
     })?;
     Ok(())
 }

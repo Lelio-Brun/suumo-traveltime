@@ -47,7 +47,7 @@ pub async fn scrape<'a>(geocode_request: RequestBuilder) -> Result<Vec<Building>
 
     let mut buildings = vec![];
 
-    for page in 1..=1 {
+    for page in 1..=pages {
         tracing::debug!("Page {page}");
 
         if page > 1 {

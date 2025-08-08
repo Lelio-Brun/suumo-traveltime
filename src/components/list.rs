@@ -40,18 +40,10 @@ pub fn List(app_id: String, api_key: String) -> Element {
         .header("Accept-Language", "en-US");
     let geocode_request2 = geocode_request.try_clone().unwrap();
 
-    // let mut criteria_colors = use_signal(|| vec![]);
-
     let mut criteria_raw: Signal<Vec<Criterion>> = use_signal(|| vec![]);
 
     let _config: Resource<Result<(), Error>> = use_resource(move || async move {
         let criteria = backend::get_criteria().await?;
-        // criteria_colors.set(
-        //     criteria
-        //         .iter()
-        //         .map(|criterion| criterion.color.clone())
-        //         .collect(),
-        // );
         criteria_raw.set(criteria);
         Ok(())
     });

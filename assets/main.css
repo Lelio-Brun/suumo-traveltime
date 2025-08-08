@@ -457,3 +457,13 @@ ul {
 .time-indicator {
   margin-left: 1em;
 }
+
+#suumo {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+#suumo input {
+  flex-grow: 1;
+}
