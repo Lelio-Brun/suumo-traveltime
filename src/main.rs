@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 use scraper::error::SelectorErrorKind;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use std::{collections::HashMap, num::ParseIntError};
@@ -64,7 +65,7 @@ struct Building {
     apartments: Vec<Apartment>,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 enum TransportationMode {
     Cycling,
     Driving,
@@ -72,12 +73,15 @@ enum TransportationMode {
     Public,
 }
 
-#[derive(Clone, PartialEq)]
-struct Criterion {
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+pub struct Criterion {
     mode: TransportationMode,
-    location: (f64, f64),
+    address: String,
     time: usize,
     color: String,
+
+    #[serde(skip)]
+    location: (f64, f64),
 }
 
 const ADDRESS: &str = "東京都渋谷区渋谷1-3-7";

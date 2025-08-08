@@ -2,13 +2,11 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing;
 use reqwest::{Client, RequestBuilder};
 
-use crate::ADDRESS;
 use crate::Building;
 use crate::Criterion;
 use crate::DESTCOLOR;
 use crate::Error;
-use crate::TIMEOUT;
-use crate::TransportationMode;
+use crate::backend;
 use crate::components::BuildingView;
 use crate::components::CriteriaForm;
 use crate::geocode;
@@ -44,29 +42,32 @@ pub fn List(app_id: String, api_key: String) -> Element {
         .header("Accept-Language", "en-US");
     let geocode_request2 = geocode_request.try_clone().unwrap();
 
-    let criteria_colors = use_signal(|| vec![DESTCOLOR.to_string()]);
+    // let mut criteria_colors = use_signal(|| vec![]);
 
-    let criteria_raw = use_signal(|| {
-        vec![(
-            TransportationMode::Cycling,
-            ADDRESS.to_string(),
-            TIMEOUT,
-            DESTCOLOR.to_string(),
-        )]
+    let mut criteria_raw: Signal<Vec<Criterion>> = use_signal(|| vec![]);
+
+    let _config: Resource<Result<(), Error>> = use_resource(move || async move {
+        let criteria = backend::get_criteria().await?;
+        // criteria_colors.set(
+        //     criteria
+        //         .iter()
+        //         .map(|criterion| criterion.color.clone())
+        //         .collect(),
+        // );
+        criteria_raw.set(criteria);
+        Ok(())
     });
 
     let criteria = use_resource(move || {
         let request = geocode_request.try_clone().unwrap();
         async move {
             let mut criteria = vec![];
-            for (mode, address, time, color) in criteria_raw() {
+            for criterion in criteria_raw() {
                 let request = request.try_clone().unwrap();
-                let location = geocode::geocode(&address, request).await?;
+                let location = geocode::geocode(&criterion.address, request).await?;
                 criteria.push(Criterion {
-                    mode,
-                    time,
                     location,
-                    color,
+                    ..criterion
                 });
             }
             Ok(criteria)
@@ -142,7 +143,7 @@ pub fn List(app_id: String, api_key: String) -> Element {
     rsx! {
         div { id: "view",
               div { id: "ui",
-                    CriteriaForm { criteria_colors, criteria_raw }
+                    CriteriaForm { criteria_raw }
 
                     match &*scrape.read_unchecked() {
                         Some(Ok(buildings)) => {
