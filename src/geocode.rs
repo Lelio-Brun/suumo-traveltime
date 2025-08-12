@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use reqwest::{Client, RequestBuilder};
-use serde_json;
+use serde_json::{self, Value};
 
 use crate::{Building, Criterion, Error, TransportationMode, backend};
 
@@ -98,7 +98,7 @@ pub async fn get_travel_time<'a>(
 
     let url = "https://api.traveltimeapp.com/v4/time-filter/fast";
     let client = Client::new();
-    let text = client
+    let json: serde_json::Value = client
         .post(url)
         .header("X-Application-Id", app_id)
         .header("X-Api-Key", api_key)
@@ -107,9 +107,10 @@ pub async fn get_travel_time<'a>(
         .json(&body)
         .send()
         .await?
-        .text()
+        .error_for_status()?
+        .json()
         .await?;
-    let json: serde_json::Value = serde_json::from_str(&text)?;
+    // let json: serde_json::Value = serde_json::from_str(&text)?;
 
     let json = &json["results"];
     for j in 0..n {

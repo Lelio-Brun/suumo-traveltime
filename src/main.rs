@@ -3,7 +3,10 @@ use scraper::error::SelectorErrorKind;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use std::{collections::HashMap, num::ParseIntError};
+use std::{
+    collections::HashMap,
+    num::{ParseFloatError, ParseIntError},
+};
 
 mod backend;
 mod components;
@@ -22,6 +25,8 @@ pub enum Error {
     SerdeJSON(#[from] serde_json::Error),
     #[error("parse error: {0}")]
     ParseInt(#[from] ParseIntError),
+    #[error("parse error: {0}")]
+    ParseFloat(#[from] ParseFloatError),
     #[error("selector error: {0}")]
     Scrape(String),
     #[error("misc error: {0}")]

@@ -375,7 +375,7 @@ ul {
   position: sticky;
   top: 10px;
   height: calc(100vh - 20px);
-  flex-basis: 30vw;
+  min-width: 30vw;
   flex-grow: 1;
   border-radius: 10px;
 }
@@ -387,6 +387,7 @@ ul {
 
 .apartments {
   display: flex;
+  flex-wrap: wrap;
   gap: 1em;
 }
 
