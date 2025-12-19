@@ -1,10 +1,16 @@
 use dioxus::prelude::*;
-use dioxus_logger::tracing;
 
 use crate::{Criterion, SUUMOURL};
 
 #[cfg(feature = "server")]
-use crate::{ADDRESS, DESTCOLOR, TIMEOUT, TransportationMode};
+use crate::TransportationMode;
+
+#[cfg(feature = "server")]
+const ADDRESS: &str = "東京都渋谷区渋谷1-3-7";
+#[cfg(feature = "server")]
+const TIMEOUT: usize = 20;
+#[cfg(feature = "server")]
+const DESTCOLOR: &str = "#c92a2a";
 
 #[cfg(feature = "server")]
 thread_local! {
@@ -36,15 +42,15 @@ thread_local! {
     };
 }
 
-#[server]
-pub async fn save_credentials(app_id: String, api_key: String) -> Result<(), ServerFnError> {
+#[post("/api/save_credentials")]
+pub async fn save_credentials(app_id: String, api_key: String) -> Result<()> {
     DB.with(|db| db.execute("DELETE FROM credentials", []))?;
     DB.with(|db| db.execute("INSERT INTO credentials VALUES (?1, ?2)", (app_id, api_key)))?;
     Ok(())
 }
 
-#[server]
-pub async fn get_credentials() -> Result<(String, String), ServerFnError> {
+#[get("/api/get_credentials")]
+pub async fn get_credentials() -> Result<(String, String)> {
     Ok(DB.with(|db| {
         db.query_row("SELECT * FROM credentials", [], |row| {
             let app_id: String = row.get(0)?;
@@ -55,7 +61,7 @@ pub async fn get_credentials() -> Result<(String, String), ServerFnError> {
 }
 
 #[server]
-pub async fn get_coords(address: String) -> Result<(f64, f64), ServerFnError> {
+pub async fn get_coords(address: String) -> Result<(f64, f64)> {
     Ok(DB.with(|db| {
         db.query_row(
             "SELECT lat, lng FROM buildings WHERE address = ?1",
@@ -70,7 +76,7 @@ pub async fn get_coords(address: String) -> Result<(f64, f64), ServerFnError> {
 }
 
 #[server]
-pub async fn set_coords(address: String, lng: f64, lat: f64) -> Result<(), ServerFnError> {
+pub async fn set_coords(address: String, lng: f64, lat: f64) -> Result<()> {
     DB.with(|db| {
         db.execute(
             "INSERT INTO buildings VALUES (?1, ?2, ?3, NULL, NULL) ON CONFLICT DO NOTHING",
@@ -81,7 +87,7 @@ pub async fn set_coords(address: String, lng: f64, lat: f64) -> Result<(), Serve
 }
 
 #[server]
-pub async fn get_criteria() -> Result<Vec<Criterion>, ServerFnError> {
+pub async fn get_criteria() -> Result<Vec<Criterion>> {
     let mut criteria: Vec<Criterion> = DB.with(|db| {
         let mut query = db.prepare("SELECT * FROM criteria")?;
         let criteria = query
@@ -119,7 +125,7 @@ pub async fn get_criteria() -> Result<Vec<Criterion>, ServerFnError> {
 }
 
 #[server]
-pub async fn set_criteria(criteria: Vec<Criterion>) -> Result<(), ServerFnError> {
+pub async fn set_criteria(criteria: Vec<Criterion>) -> Result<()> {
     DB.with(|db| {
         db.execute_batch(&format!(
             "DELETE FROM criteria;
@@ -141,7 +147,7 @@ pub async fn set_criteria(criteria: Vec<Criterion>) -> Result<(), ServerFnError>
 }
 
 #[server]
-pub async fn get_suumo_url() -> Result<String, ServerFnError> {
+pub async fn get_suumo_url() -> Result<String> {
     let url = DB
         .with(|db| db.query_row("SELECT url FROM config", [], |row| row.get(0)))
         .unwrap_or(SUUMOURL.to_string());
@@ -149,7 +155,7 @@ pub async fn get_suumo_url() -> Result<String, ServerFnError> {
 }
 
 #[server]
-pub async fn set_suumo_url(url: String) -> Result<(), ServerFnError> {
+pub async fn set_suumo_url(url: String) -> Result<()> {
     DB.with(|db| {
         db.execute(
             "INSERT INTO config VALUES (0, ?1) ON CONFLICT DO UPDATE SET url = ?1",

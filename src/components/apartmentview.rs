@@ -15,7 +15,7 @@ pub fn ApartmentView(name: String, apartment: Apartment) -> Element {
                  },
              onmouseleave:  move |_| {
                  async move {
-                     let _ = document::eval(&format!(r#"unfocusMarker();"#)).await;
+                     let _ = document::eval(r#"unfocusMarker();"#).await;
                  }
              },
              img {

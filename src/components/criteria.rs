@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
-use dioxus_logger::tracing;
-use reqwest::RequestBuilder;
 
-use crate::{Building, Criterion, Error, SUUMOURL, TransportationMode, backend, geocode, scrape};
-
-use super::ClonableRequestBuilder;
+use crate::{
+    Building, Criterion, Error, SUUMOURL, TransportationMode, backend,
+    geocode::{self, ClonableRequestBuilder},
+    get_string, random_color, scrape,
+};
 
 #[component]
 fn Criteria(criteria_raw: Signal<Vec<Criterion>>) -> Element {
@@ -38,12 +38,10 @@ fn Criteria(criteria_raw: Signal<Vec<Criterion>>) -> Element {
                 input {
                     r#type: "search",
                     name: "address{k}",
-                    key: "address{k}",
                     value: criterion.address
                 }
                 select {
                     name: "mode{k}",
-                    key: "mode{k}",
                     option {
                         value: "cycling",
                         selected: criterion.mode == TransportationMode::Cycling,
@@ -68,7 +66,6 @@ fn Criteria(criteria_raw: Signal<Vec<Criterion>>) -> Element {
                 input {
                     class: "time",
                     name: "time{k}",
-                    key: "time{k}",
                     r#type: "number",
                     value: criterion.time,
                     min: "1",
@@ -93,62 +90,70 @@ pub fn CriteriaForm(
     let suumo_url = use_server_future(backend::get_suumo_url)?;
     let mut suumo_url_sig = use_signal(|| SUUMOURL.to_string());
 
-    match &*suumo_url.read_unchecked() {
+    let submit = move |event: FormEvent| {
+        event.prevent_default();
+        // TODO: ErrorBoundary to handle errors
+        let api_key = api_key.clone();
+        let app_id = app_id.clone();
+        let request = geocode_request.clone().0;
+        async move {
+            // get all search criteria
+            let mut criteria = vec![];
+            for (k, criterion) in criteria_raw().into_iter().enumerate() {
+                let address = get_string(&event, &format!("address{k}")).unwrap();
+                let mode = match get_string(&event, &format!("mode{k}")).unwrap().as_str() {
+                    "cycling" => Ok(TransportationMode::Cycling),
+                    "driving" => Ok(TransportationMode::Driving),
+                    "walking" => Ok(TransportationMode::Walking),
+                    "public" => Ok(TransportationMode::Public),
+                    _ => Err(Error::Misc("unknown transportation mode".to_string())),
+                }?;
+                let time = get_string(&event, &format!("time{k}")).unwrap();
+
+                if !address.is_empty() && !time.is_empty() {
+                    let time = time.parse::<usize>()?;
+                    criteria.push(Criterion {
+                        mode,
+                        address,
+                        time,
+                        ..criterion
+                    })
+                }
+            }
+
+            backend::set_criteria(criteria.clone()).await?;
+            backend::set_suumo_url(suumo_url_sig()).await?;
+
+            criteria_raw.set(criteria.clone());
+
+            // geocode the criteria
+            let mut criteria_loc = vec![];
+            for criterion in criteria {
+                let request = request.try_clone().unwrap();
+                let location = geocode::geocode(&criterion.address, request).await?;
+                criteria_loc.push(Criterion {
+                    location,
+                    ..criterion
+                });
+            }
+            criteria_located.set(criteria_loc.clone());
+
+            // scrape SUUMO
+            let mut buildings_v = scrape::scrape(scrape_progress, request).await?;
+            geocode::get_travel_time(&app_id, &api_key, &mut buildings_v, &criteria_loc).await?;
+            buildings.set(buildings_v);
+
+            Ok(())
+        }
+    };
+
+    match suumo_url() {
         None => rsx! { div { "Checking database..." } },
         Some(Ok(_suumo_url)) => {
             // tracing::debug!("{suumo_url}");
             rsx! {
                 form { id: "criteria_form",
-                       onsubmit: move |event| {
-                           // TODO: ErrorBoundary to handle errors
-                           let api_key = api_key.clone();
-                           let app_id = app_id.clone();
-                           let request = geocode_request.clone().0;
-                           async move {
-                               let values = event.values();
-                               let mut criteria = vec![];
-                               for (k, criterion) in criteria_raw().into_iter().enumerate() {
-                                   let address = values.get(format!("address{k}").as_str()).unwrap().as_value();
-                                   let mode = match
-                                       values.get(format!("mode{k}").as_str()).unwrap().as_value().as_str() {
-                                           "cycling" => Ok(TransportationMode::Cycling),
-                                           "driving" => Ok(TransportationMode::Driving),
-                                           "walking" => Ok(TransportationMode::Walking),
-                                           "public" => Ok(TransportationMode::Public),
-                                           _ => Err(Error::Misc("unknown transportation mode".to_string()))
-                                       }?;
-                                   let time = values.get(format!("time{k}").as_str()).unwrap().as_value();
-
-                                   if !address.is_empty() && !time.is_empty() {
-                                       let time = time.parse::<usize>()?;
-                                       criteria.push(Criterion { mode, address, time, ..criterion })
-                                   }
-                               }
-
-                               _ = backend::set_criteria(criteria.clone()).await;
-                               _ = backend::set_suumo_url(suumo_url_sig()).await;
-
-                               criteria_raw.set(criteria.clone());
-
-                               let mut criteria_loc = vec![];
-                               for criterion in criteria {
-                                   let request = request.try_clone().unwrap();
-                                   let location = geocode::geocode(&criterion.address, request).await?;
-                                   criteria_loc.push(Criterion {
-                                       location,
-                                       ..criterion
-                                   });
-                               }
-                               criteria_located.set(criteria_loc.clone());
-
-                               let mut buildings_v = scrape::scrape(scrape_progress, request).await?;
-                               geocode::get_travel_time(&app_id, &api_key, &mut buildings_v, &criteria_loc)
-                                   .await?;
-                               buildings.set(buildings_v);
-
-                               Ok(())
-                           }
-                       },
+                       onsubmit: submit,
                        div { id: "suumo",
                              label { for: "suumo_url", "Suumo URL" }
                              input {
@@ -165,7 +170,7 @@ pub fn CriteriaForm(
                            r#type: "button",
                            onclick: move |_| {
                                let last = criteria_raw().last().unwrap().clone();
-                               criteria_raw.push(Criterion { color: random_color::RandomColor::new().to_hex(), ..last })
+                               criteria_raw.push(Criterion { color: random_color(), ..last })
                            },
                            i { class: "fa-solid fa-circle-plus fa-lg"}
                        }

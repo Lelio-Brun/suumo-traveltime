@@ -2,21 +2,23 @@
 name = "suumo-traveltime"
 version = "0.1.0"
 authors = ["Lélio Brun <lb@leliobrun.net>"]
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dioxus = { version = "0.6.0", features = ["fullstack"] }
-dioxus-logger = "0.6.2"
+dioxus = { version = "0.7.2", features = ["fullstack"] }
+dioxus-html = { version = "0.7.2", features = ["serialize"] }
+dioxus-logger = "0.7.2"
 random_color = "1.1.0"
-reqwest = { version = "0.12.22", features = ["json"] }
+reqwest = { version = "0.12.26", features = ["json"] }
 rusqlite = { version = "0.37.0", optional = true }
-scraper = "0.23.1"
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.141"
-thiserror = "2.0.12"
+scraper = "0.25.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+thiserror = "2.0.17"
 getrandom = { version = "0.3", features = ["wasm_js"] }
+chrono = { version = "0.4.42", features = ["alloc"] }
 
 [features]
 default = []

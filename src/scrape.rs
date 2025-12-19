@@ -7,11 +7,10 @@ use scraper::{Html, Selector};
 
 use crate::{Apartment, Building, Error, backend, geocode::geocode};
 
-pub async fn scrape<'a>(
+pub async fn scrape(
     mut scrape_progress: Signal<f64>,
     geocode_request: RequestBuilder,
 ) -> Result<Vec<Building>, Error> {
-    // let url = "https://suumo.jp/jj/chintai/ichiran/FR301FC001/?url=%2Fchintai%2Fichiran%2FFR301FC001%2F&ar=030&bs=040&pc=50&smk=&po1=25&po2=99&tc=0400501&tc=0400902&shkr1=03&shkr2=03&shkr3=03&shkr4=03&cb=0.0&ct=13.0&md=03&md=04&md=05&md=06&md=07&md=08&md=09&md=10&md=11&md=12&md=13&md=14&et=9999999&mb=25&mt=9999999&cn=9999999&ta=13&sc=13103&sc=13104&sc=13113&sc=13110&sc=13112";
     let url = backend::get_suumo_url().await?;
     tracing::debug!("scraping {url}");
     let url = format!("https://corsproxy.io/?url={url}");
