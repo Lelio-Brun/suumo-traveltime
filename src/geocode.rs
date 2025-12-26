@@ -94,6 +94,12 @@ pub async fn get_travel_time(
         "originIndex,destinationIndex,duration,condition",
     );
 
+    let set_time = |building: &mut Building, i: usize, criterion: &Criterion, time: usize| {
+        if time <= criterion.time * 60 {
+            building.times.insert(i, (criterion.clone(), time));
+        }
+    };
+
     for (i, criterion) in criteria.iter().enumerate() {
         let origin = serde_json::json!(
         {
@@ -113,7 +119,21 @@ pub async fn get_travel_time(
             TransportationMode::Public => (100, "TRANSIT"),
         };
 
-        for buildings_batch in buildings.chunks_mut(limit) {
+        let mut new_buildings = vec![];
+        for building in buildings.iter_mut() {
+            match backend::get_time(
+                criterion.address.clone(),
+                building.address.clone(),
+                criterion.mode.clone(),
+            )
+            .await
+            {
+                Ok(time) => set_time(building, i, criterion, time),
+                Err(_) => new_buildings.push(building),
+            }
+        }
+
+        for buildings_batch in new_buildings.chunks_mut(limit) {
             let destinations = buildings_batch
                 .iter()
                 .map(|building| {
@@ -158,11 +178,15 @@ pub async fn get_travel_time(
                         .parse::<f64>()
                         .unwrap() as usize;
                     let j = route["destinationIndex"].as_u64().unwrap() as usize;
-                    if time <= criterion.time * 60 {
-                        buildings_batch[j]
-                            .times
-                            .insert(i, (criterion.clone(), time));
-                    }
+                    let building = &mut buildings_batch[j];
+                    backend::set_time(
+                        criterion.address.clone(),
+                        building.address.clone(),
+                        criterion.mode.clone(),
+                        time,
+                    )
+                    .await?;
+                    set_time(building, i, criterion, time)
                 }
             }
         }

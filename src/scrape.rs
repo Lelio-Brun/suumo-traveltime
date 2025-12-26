@@ -24,19 +24,6 @@ pub async fn scrape(
 
     let mut doc = Html::parse_document(&html);
 
-    let total_sel = Selector::parse("div.paginate_set-hit")?;
-    let mut total = doc
-        .select(&total_sel)
-        .next()
-        .ok_or(Error::Scrape("count not found".to_string()))?
-        .text()
-        .next()
-        .ok_or(Error::Scrape("number not found".to_string()))?
-        .trim()
-        .to_string();
-    total.retain(|c| c != ',');
-    let total: f64 = total.parse()?;
-
     let pagination_sel = Selector::parse("ol.pagination-parts")?;
     let pages: usize = doc
         .select(&pagination_sel)
@@ -64,9 +51,9 @@ pub async fn scrape(
     let id_sel = Selector::parse("input#bukken_0")?;
 
     let mut buildings = vec![];
-    let mut apt_count = 0.0;
 
-    for page in 1..=1 {
+    for page in 1..=pages {
+        scrape_progress.set(page as f64 / pages as f64);
         tracing::debug!("Page {page} / {pages}");
 
         if page > 1 {
@@ -159,9 +146,6 @@ pub async fn scrape(
                     url,
                     id,
                 });
-
-                apt_count += 1.0;
-                scrape_progress.set(apt_count / total);
             }
 
             buildings.push(Building {

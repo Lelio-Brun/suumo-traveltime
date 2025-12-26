@@ -85,10 +85,11 @@ pub fn List(app_id: String, api_key: String) -> Element {
                         let buildings = buildings().into_iter().filter(|building| building.times.len() == criteria_located().len());
                         let bui_count = buildings.clone().count();
                         let apt_count = buildings.clone().fold(0, |count, building| count + building.apartments.len());
+                        let progress = (scrape_progress() * 100.0).round() as usize;
 
                         rsx! {
                             div {
-                                "Listing {apt_count} apartments in {bui_count} buildings ({scrape_progress()}):"
+                                "Listing {apt_count} apartments in {bui_count} buildings ({progress}%):"
                             }
                             ul { id: "buildings",
                                  for building in buildings {

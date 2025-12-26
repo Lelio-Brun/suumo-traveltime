@@ -1,12 +1,10 @@
 use dioxus::prelude::*;
 
-use crate::{Criterion, SUUMOURL};
-
-#[cfg(feature = "server")]
-use crate::TransportationMode;
+use crate::{Criterion, SUUMOURL, TransportationMode};
 
 #[cfg(feature = "server")]
 const ADDRESS: &str = "東京都渋谷区渋谷1-3-7";
+// 台東区池之端１−６−１３
 #[cfg(feature = "server")]
 const TIMEOUT: usize = 20;
 #[cfg(feature = "server")]
@@ -34,6 +32,22 @@ thread_local! {
                 mode TEXT NOT NULL,
                 time INTEGER,
                 color TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS cycling(
+                origin TEXT NOT NULL,
+                destination TEXT NOT NULL,
+                time INTEGER);
+            CREATE TABLE IF NOT EXISTS walking (
+                origin TEXT NOT NULL,
+                destination TEXT NOT NULL,
+                time INTEGER);
+            CREATE TABLE IF NOT EXISTS driving (
+                origin TEXT NOT NULL,
+                destination TEXT NOT NULL,
+                time INTEGER);
+            CREATE TABLE IF NOT EXISTS public (
+                origin TEXT NOT NULL,
+                destination TEXT NOT NULL,
+                time INTEGER);
             CREATE TABLE IF NOT EXISTS config (
                 id INTEGER PRIMARY KEY,
                 url TEXT NOT NULL);").unwrap();
@@ -42,14 +56,14 @@ thread_local! {
     };
 }
 
-#[post("/api/save_credentials")]
+#[server]
 pub async fn save_credentials(app_id: String, api_key: String) -> Result<()> {
     DB.with(|db| db.execute("DELETE FROM credentials", []))?;
     DB.with(|db| db.execute("INSERT INTO credentials VALUES (?1, ?2)", (app_id, api_key)))?;
     Ok(())
 }
 
-#[get("/api/get_credentials")]
+#[server]
 pub async fn get_credentials() -> Result<(String, String)> {
     Ok(DB.with(|db| {
         db.query_row("SELECT * FROM credentials", [], |row| {
@@ -83,6 +97,44 @@ pub async fn set_coords(address: String, lng: f64, lat: f64) -> Result<()> {
             (address, lat, lng),
         )
     })?;
+    Ok(())
+}
+
+#[server]
+pub async fn get_time(
+    origin: String,
+    destination: String,
+    mode: TransportationMode,
+) -> Result<usize> {
+    let query = format!(
+        "SELECT time FROM {} WHERE origin = ?1 AND destination = ?2",
+        match mode {
+            TransportationMode::Cycling => "cycling",
+            TransportationMode::Walking => "walking",
+            TransportationMode::Driving => "driving",
+            TransportationMode::Public => "public",
+        }
+    );
+    Ok(DB.with(|db| db.query_row(&query, (origin, destination), |row| row.get(0)))?)
+}
+
+#[server]
+pub async fn set_time(
+    origin: String,
+    destination: String,
+    mode: TransportationMode,
+    time: usize,
+) -> Result<()> {
+    let query = format!(
+        "INSERT INTO {} VALUES (?1, ?2, ?3) ON CONFLICT DO NOTHING",
+        match mode {
+            TransportationMode::Cycling => "cycling",
+            TransportationMode::Walking => "walking",
+            TransportationMode::Driving => "driving",
+            TransportationMode::Public => "public",
+        }
+    );
+    DB.with(|db| db.execute(&query, (origin, destination, time)))?;
     Ok(())
 }
 
